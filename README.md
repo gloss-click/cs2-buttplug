@@ -15,11 +15,12 @@ use it in botmatches, or on servers set up for the purpose of horny and populate
 ## usage
 
 1.  download Crotch-Stim: Get Off
-       - for windows: download it Once There's A Link, save it somewhere you can get back to easily
+       - for windows: download [the .exe from the left side of this page](https://git.sr.ht/~hornycactus/CrotchStimGetOff/refs/v0.1.0), save it somewhere you can get back to easily
        - for anything else: clone this repository, grab a recent version of Rust, `cargo build --release`, move `target/release/crotch-stim-get-off` somewhere you can get back to easily
 2. run Crotch-Stim: Get Off.
     it'll create default config and script files in the same folder you put the program itself into and give you a chance to edit them before it starts running.
     i have not been able to test it for use cases that aren't my own extremely not-ideal setup, so a lot of things might be fragile.
+    good luck.
 3. play CS:GO and have fun things happen.
 
 ## configuration
