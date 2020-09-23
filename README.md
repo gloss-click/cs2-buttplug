@@ -10,7 +10,7 @@ this software is intended for risk-aware, consensual sexual enjoyment by all.
 CS:GO is a game with matchmaking that can put you in matches with whoever the hell.
 don't use this in matchmaking or generic community servers.
 use it in botmatches, or on servers set up for the purpose of horny and populated by adults who know what they're getting into.
-(i might set one of those up for a bit at some point.)
+(at time of writing, i've got one of those. launch cs:go, pull up the console, `connect csgo.cactus.sexy`.)
 
 ## usage
 
@@ -84,5 +84,5 @@ the `csgo-gsi` library that this uses is released under the [Anti-Capitalist Sof
 
 ## changelog
 
-v0.1.0 - pending
+v0.1.0 - 2020-09-23
 - write the damn thing
