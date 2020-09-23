@@ -2,6 +2,8 @@
 
 what if CS:GO was horny?
 
+an experiment, gluing CS:GO to https://buttplug.io and seeing what happens.
+
 ## important ethical disclaimer
 
 this software is intended for risk-aware, consensual sexual enjoyment by all.
@@ -9,6 +11,16 @@ CS:GO is a game with matchmaking that can put you in matches with whoever the he
 don't use this in matchmaking or generic community servers.
 use it in botmatches, or on servers set up for the purpose of horny and populated by adults who know what they're getting into.
 (i might set one of those up for a bit at some point.)
+
+## usage
+
+1.  download Crotch-Stim: Get Off
+       - for windows: download it Once There's A Link, save it somewhere you can get back to easily
+       - for anything else: clone this repository, grab a recent version of Rust, `cargo build --release`, move `target/release/crotch-stim-get-off` somewhere you can get back to easily
+2. run Crotch-Stim: Get Off.
+    it'll create default config and script files in the same folder you put the program itself into and give you a chance to edit them before it starts running.
+    i have not been able to test it for use cases that aren't my own extremely not-ideal setup, so a lot of things might be fragile.
+3. play CS:GO and have fun things happen.
 
 ## configuration
 
