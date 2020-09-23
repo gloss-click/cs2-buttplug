@@ -1,0 +1,27 @@
+[package]
+name = "crotch-stim-get-off"
+version = "0.1.0"
+authors = ["hornycactus <me@cactus.sexy>"]
+edition = "2018"
+description = "tying CS:GO to buttplug.io"
+readme = "README.md"
+homepage = "https://sr.ht/~hornycactus/CrotchStimGetOff"
+repository = "https://git.sr.ht/~hornycactus/CrotchStimGetOff"
+license-file = "LICENSE.md"
+publish = false
+
+[dependencies]
+buttplug = "0.8.2"
+csgo-gsi = { version = "0.3.0", features = ["rhai"] }
+rhai = { version = "0.18.3", features = ["sync"] }
+futures = "0.3.5"
+toml = "0.5.6"
+serde = { version = "1.0.116", features = ["derive"] }
+anyhow = "1.0.32"
+fehler = "1.0.0"
+tokio = { version = "0.2.22", features = ["full"] }
+async-std = { version = "1.6.4", features = ["tokio02"] }
+log = "0.4.11"
+pretty_env_logger = "0.4.0"
+git-transport = { version = "0.2.1", features = ["http-client-curl"] }
+semver = "0.10.0"
