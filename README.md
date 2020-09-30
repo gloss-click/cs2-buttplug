@@ -10,7 +10,6 @@ this software is intended for risk-aware, consensual sexual enjoyment by all.
 CS:GO is a game with matchmaking that can put you in matches with whoever the hell.
 don't use this in matchmaking or generic community servers.
 use it in botmatches, or on servers set up for the purpose of horny and populated by adults who know what they're getting into.
-(at time of writing, i've got one of those. launch cs:go, pull up the console, `connect csgo.cactus.sexy`.)
 
 ## usage
 
