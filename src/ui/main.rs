@@ -112,7 +112,7 @@ impl eframe::App for CsButtplugUi {
             ui.heading("CS2 Buttplug.io integration");
             ui.add_space(5.0);
             
-            ui.label(format!("This is cs2-buttplug (cli), v{}, original author hornycactus (https://cactus.sexy)", env!("CARGO_PKG_VERSION")));
+            ui.label(format!("This is cs2-buttplug (gui), v{}, original author hornycactus (https://cactus.sexy)", env!("CARGO_PKG_VERSION")));
     
             ui.separator();
             ui.add_space(5.0);
