@@ -1,115 +1,132 @@
-use std::{
-    future::Future,
-};
-
 use anyhow::{Context, Error};
 use buttplug::{
     client::{
-        ButtplugClient, ButtplugClientError,
-        ButtplugClientEvent,
-        device::VibrateCommand,
+        ButtplugClient,
+        ButtplugClientEvent, device::ScalarValueCommand
     },
-    connector::{ButtplugRemoteClientConnector, ButtplugWebsocketClientTransport},
-    core::messages::{
-        serializer::ButtplugClientJSONSerializer,
-    },
-    util::async_manager,
+    core::connector::{ButtplugRemoteClientConnector, ButtplugWebsocketClientTransport},
+    core::message::serializer::ButtplugClientJSONSerializer,
+    util::async_manager
 };
 use fehler::throws;
-use futures::{StreamExt, future::RemoteHandle};
-use tokio::{
-    sync::watch,
-};
+use futures::{future::RemoteHandle, StreamExt};
+use tokio::sync::broadcast;
+
+use crate::CloseEvent;
+
+#[derive(Copy, Clone)]
+pub enum BPCommand {
+    Vibrate(f64),
+    Stop,
+}
 
 #[throws]
-async fn run_buttplug<
-    ClientFuture: Future<
-        Output = Result<
-            (ButtplugClient, impl StreamExt<Item = ButtplugClientEvent> + Unpin),
-            ButtplugClientError,
-        >,
-    >,
->(
-    client: ClientFuture,
-    recv: watch::Receiver<f64>,
+async fn run_buttplug(
+    close_receive: broadcast::Receiver<CloseEvent>, 
+    client: ButtplugClient,
+    transport: ButtplugWebsocketClientTransport,
+    rx: broadcast::Receiver<BPCommand>,
 ) {
-    info!("in buttplug thread");
-    let (client, event_stream) = client
-        .await
-        .context("couldn't start buttplug client")?;
+    info!("Launched buttplug.io thread");
 
-    info!("started client");
+    let recv = tokio_stream::wrappers::BroadcastStream::new(rx);
+    let close_recv = tokio_stream::wrappers::BroadcastStream::new(close_receive);
 
-    client.start_scanning()
-        .await
-        .context("couldn't start device scan")?;
+    let connector = ButtplugRemoteClientConnector::<ButtplugWebsocketClientTransport, ButtplugClientJSONSerializer>::new(transport);
+
+    client.connect(connector).await?;
+
+    info!("Starting buttplug.io client");
+
+    client.start_scanning().await.context("Couldn't start buttplug.io device scan")?;
 
     enum Event {
         Buttplug(ButtplugClientEvent),
-        VibrateSpeed(f64),
+        Command(BPCommand),
+        CloseCommand,
     }
 
-    let mut events = tokio::stream::StreamExt::merge(
-        event_stream.map(Event::Buttplug),
-        recv.map(Event::VibrateSpeed)
+    let merge_bp_and_commands = tokio_stream::StreamExt::merge(
+        client.event_stream().map(Event::Buttplug),
+        recv.map(|ev| {
+            Event::Command(match ev {
+                Ok(ev) => ev,
+                Err(_) => BPCommand::Stop, // stop on error
+            })
+        }),
+    );
+    let mut merge_bp_and_commands_and_close = tokio_stream::StreamExt::merge(
+        merge_bp_and_commands,
+        close_recv.map(|_| Event::CloseCommand),
     );
 
-    while let Some(event) = events.next().await {
+    while let Some(event) = merge_bp_and_commands_and_close.next().await {
         match event {
             Event::Buttplug(ButtplugClientEvent::DeviceAdded(dev)) => {
-                println!("We got a device: {}", dev.name);
+                info!("We got a device: {}", dev.name());
             }
             Event::Buttplug(ButtplugClientEvent::ServerDisconnect) => {
                 // The server disconnected, which means we're done here, so just
                 // break up to the top level.
-                println!("Server disconnected!");
+                info!("Server disconnected!");
                 break;
             }
             Event::Buttplug(_) => {
                 // Something else happened, like scanning finishing, devices
                 // getting removed, etc... Might as well say something about it.
-                println!("Got some other kind of event we don't care about");
+                info!("Got some other kind of event we don't care about");
             }
-            Event::VibrateSpeed(speed) => {
-                info!("got vibrate speed {} from script", speed);
-                for device in client.devices() {
-                    info!("sending vibrate speed {} to device {}", speed, &device.name);
-                    device.vibrate(VibrateCommand::Speed(speed)).await
-                        .context("couldn't send vibrate command")?;
+            Event::Command(command) => {
+                match command {
+                    BPCommand::Vibrate(speed) => {
+                        info!("got vibrate speed {} from script", speed);
+                        for device in client.devices() {
+                            info!("sending vibrate speed {} to device {}", speed, &device.name());
+                            device.vibrate(&ScalarValueCommand::ScalarValue(speed.min(1.0))).await
+                                .context("couldn't send vibrate command")?;
+                        }
+                    },
+                    BPCommand::Stop => {
+                        for device in client.devices() {
+                            info!("stopping device {}", &device.name());
+                            device.vibrate(&ScalarValueCommand::ScalarValue(0.0)).await
+                                .context("couldn't send stop command")?;
+                        }
+                    }
                 }
-            }
+            },
+            Event::CloseCommand => {
+                info!("Buttplug thread asked to quit");
+                break;
+            },
         }
     }
 
+    client.disconnect().await.expect("Failed to disconnect from buttplug");
+
     // And now we're done!
-    println!("Exiting example");
+    info!("Exiting buttplug thread");
 }
 
 #[throws]
-pub fn spawn_run_thread(url: &Option<String>) -> (watch::Sender<f64>, RemoteHandle<Result<(), Error>>) {
-    info!("spawning buttplug thread");
-    let client_name = "Crotch-Stim: Get Off";
-    let (send, recv) = watch::channel(0.0);
-    let handle = match url {
-        None => async_manager::spawn_with_handle(run_buttplug(
-            ButtplugClient::connect_in_process(client_name, 0),
-            recv,
-        ))?,
-        Some(connect_url) => {
-            let transport = if connect_url.starts_with("wss://") {
-                ButtplugWebsocketClientTransport::new_secure_connector(&connect_url, false)
-            } else {
-                ButtplugWebsocketClientTransport::new_insecure_connector(&connect_url)
-            };
-            let connector = ButtplugRemoteClientConnector::<
-                ButtplugWebsocketClientTransport,
-                ButtplugClientJSONSerializer,
-            >::new(transport);
-            async_manager::spawn_with_handle(run_buttplug(
-                ButtplugClient::connect(client_name, connector),
-                recv,
-            ))?
-        }
+pub fn spawn_run_thread(close_receive: broadcast::Receiver<CloseEvent>, connect_url: &String) -> (broadcast::Sender<BPCommand>, RemoteHandle<Result<(), Error>>) {
+    info!("Spawning buttplug thread");
+    let client_name = "CS2 integration";
+    let (send, recv) = broadcast::channel(5);
+    let bpclient = ButtplugClient::new(client_name);
+
+    let transport = if connect_url.starts_with("wss://") {
+        ButtplugWebsocketClientTransport::new_secure_connector(&connect_url, false)
+    } else {
+        ButtplugWebsocketClientTransport::new_insecure_connector(&connect_url)
     };
+
+    let handle = async_manager::spawn_with_handle(run_buttplug(
+                close_receive,
+                bpclient,
+                transport,
+                recv,
+            ))?;
+
     (send, handle)
 }

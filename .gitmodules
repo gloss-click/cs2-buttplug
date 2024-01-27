@@ -1,0 +1,3 @@
+[submodule "deps/csgo-gsi"]
+	path = deps/csgo-gsi
+	url = https://github.com/gloss-click/csgo-gsi

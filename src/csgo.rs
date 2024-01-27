@@ -1,19 +1,20 @@
-use std::time::Duration;
+use std::{time::Duration, path::PathBuf};
 
 use csgo_gsi::{Error, GSIConfigBuilder, GSIServer, Subscription};
 use fehler::throws;
 
 #[throws]
-pub fn build_server(port: u16) -> GSIServer {
-    let config = GSIConfigBuilder::new("CrotchStimGetOff")
+pub fn build_server(port: u16, game_path: PathBuf) -> GSIServer {
+    let config = GSIConfigBuilder::new("cs2-bp")
         .subscribe_multiple(Subscription::UNRESTRICTED)
-        .throttle(Duration::from_millis(0))
-        .buffer(Duration::from_millis(0))
+        .throttle(Duration::from_millis(1000))
+        .buffer(Duration::from_millis(100))
+        .heartbeat(Duration::from_millis(5000))
         .build();
 
     let mut server = GSIServer::new(config, port);
 
-    server.install()?;
+    server.install(game_path)?;
 
     server
 }
