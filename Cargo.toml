@@ -1,12 +1,12 @@
 [package]
-name = "crotch-stim-get-off"
+name = "cs2_buttplug"
 version = "0.4.0"
-authors = ["hornycactus <me@cactus.sexy>"]
+authors = ["gloss-click", "hornycactus <me@cactus.sexy>"]
 edition = "2018"
-description = "tying CS2 to buttplug.io"
+description = "Buttplug.io mod for CS2"
 readme = "README.md"
-homepage = "https://sr.ht/~hornycactus/CrotchStimGetOff"
-repository = "https://git.sr.ht/~hornycactus/CrotchStimGetOff"
+homepage = "https://github.com/gloss-click/cs2-buttplug"
+repository = "https://github.com/gloss-click/cs2-buttplug"
 license-file = "LICENSE.md"
 publish = false
 

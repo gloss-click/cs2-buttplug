@@ -111,8 +111,13 @@ impl eframe::App for CsButtplugUi {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("CS2 Buttplug.io integration");
             ui.add_space(5.0);
-            
-            ui.label(format!("This is cs2-buttplug (gui), v{}, original author hornycactus (https://cactus.sexy)", env!("CARGO_PKG_VERSION")));
+
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                ui.label(format!("This is cs2-buttplug (gui), v{}, github: ", env!("CARGO_PKG_VERSION"))); 
+                ui.hyperlink("https://github.com/gloss-click/cs2-buttplug");
+            });
+            ui.label("Credit to original author hornycactus.");
     
             ui.separator();
             ui.add_space(5.0);
