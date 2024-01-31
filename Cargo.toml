@@ -1,6 +1,6 @@
 [package]
 name = "cs2_buttplug"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["gloss-click", "hornycactus <me@cactus.sexy>"]
 edition = "2018"
 description = "Buttplug.io mod for CS2"
@@ -24,7 +24,7 @@ path = "src/ui/main.rs"
 
 [dependencies]
 buttplug = "7.1.11"
-csgo-gsi = { version = "0.4.0", features = ["rhai"], path = 'deps/csgo-gsi' }
+csgo-gsi = { features = ["rhai"], path = 'deps/csgo-gsi' }
 rhai = { version = "0.18.3", features = ["sync"] }
 futures = "0.3.30"
 toml = "0.8.8"

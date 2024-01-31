@@ -23,8 +23,7 @@ use crate::timer_thread::ScriptCommand;
 
 const DEFAULT_GAME_DIR: &str = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive\\game\\csgo\\cfg";
 
-#[derive(Clone, Copy, Debug)]
-pub struct CloseEvent{}
+pub type CloseEvent = csgo_gsi::CloseEvent;
 
 #[throws]
 fn spawn_tasks(close_receive: broadcast::Receiver<CloseEvent>, config: &Config, tokio_handle: Handle) -> (RemoteHandle<Result<(), Error>>, GSIServer, broadcast::Sender<ScriptCommand>, JoinHandle<()>, script::ScriptHost) {
@@ -42,13 +41,9 @@ pub async fn async_main(config: Config, tokio_handle: Handle, close_send: tokio:
         Ok((buttplug_thread, mut gsi_server, event_proc_send, event_proc_thread, mut script_host)) => {
             gsi_server.add_listener(move |update| script_host.handle_update(update));
                                         
-            let mut gsi_close_event_receiver = close_send.subscribe();
+            let gsi_close_event_receiver = close_send.subscribe();
             
-            let gsi_task_handle = gsi_server.run(async move { 
-                let ev = gsi_close_event_receiver.recv();
-                ev.await.expect("Error waiting for close in GSI server."); 
-                Ok(())
-            }.boxed()).map_err(|err| anyhow::anyhow!("{}", err));
+            let gsi_task_handle = gsi_server.run(tokio_handle.clone(), gsi_close_event_receiver).map_err(|err| anyhow::anyhow!("{}", err));
 
             let gsi_tokio_handle = tokio_handle.clone();
             let gsi_exit_handle = tokio_handle.spawn_blocking(move || gsi_tokio_handle.block_on(gsi_task_handle));
