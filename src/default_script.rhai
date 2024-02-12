@@ -9,8 +9,14 @@ fn handle_update(update) {
     if update.player != () {
         if update.player.match_stats != () {
             if kills < update.player.match_stats.kills {
+                let kdiff = (update.player.match_stats.kills - kills);
+                if kdiff > 5 {
+                    kdiff = 5;
+                }
+                for i in range(0, kdiff) {
+                    vibrate_index(kills.to_float()/50.0, 1.0, (kills + i) % 2); 
+                }
                 kills = update.player.match_stats.kills;
-                vibrate(0.3 + kills.to_float()/25.0, 1.0);
             }
             if assists < update.player.match_stats.assists {
                 assists = update.player.match_stats.assists;

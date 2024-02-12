@@ -24,6 +24,7 @@ impl ScriptHost {
     #[throws]
     pub fn new(send: broadcast::Sender<ScriptCommand>) -> Self {
         let vsend = send.clone();
+        let visend = send.clone();
         let ssend = send.clone();
         let mut engine = Engine::new();
         
@@ -34,6 +35,12 @@ impl ScriptHost {
         engine.load_package(CSGOPackage::new().get());
         engine.register_fn("vibrate", move |speed: f64, time: f64| {
             let result = vsend.send(ScriptCommand::VibrateFor(speed, time));
+            if let Err(err) = result {
+                error!("Error sending command from script to buttplug: {}", err);
+            }
+        });
+        engine.register_fn("vibrate_index", move |speed: f64, time: f64, index: i64| {
+            let result = visend.send(ScriptCommand::VibrateForWithIndex(speed, time, index as u32));
             if let Err(err) = result {
                 error!("Error sending command from script to buttplug: {}", err);
             }

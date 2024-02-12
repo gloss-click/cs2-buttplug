@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::{Context, Error};
 use buttplug::{
     client::{
@@ -17,7 +19,8 @@ use crate::CloseEvent;
 #[derive(Copy, Clone)]
 pub enum BPCommand {
     Vibrate(f64),
-    Stop,
+    VibrateIndex(f64, u32),
+    Stop
 }
 
 #[throws]
@@ -79,18 +82,26 @@ async fn run_buttplug(
             Event::Command(command) => {
                 match command {
                     BPCommand::Vibrate(speed) => {
-                        info!("got vibrate speed {} from script", speed);
                         for device in client.devices() {
+                            info!("setting speed {} across device {}", speed, &device.name());
                             info!("sending vibrate speed {} to device {}", speed, &device.name());
                             device.vibrate(&ScalarValueCommand::ScalarValue(speed.min(1.0))).await
-                                .context("couldn't send vibrate command")?;
+                                .context("couldn't send Vibrate command")?;
                         }
                     },
                     BPCommand::Stop => {
                         for device in client.devices() {
                             info!("stopping device {}", &device.name());
                             device.vibrate(&ScalarValueCommand::ScalarValue(0.0)).await
-                                .context("couldn't send stop command")?;
+                                .context("couldn't send Stop command")?;
+                        }
+                    },
+                    BPCommand::VibrateIndex(speed, index) => {
+                        for device in client.devices() {
+                            info!("setting speed {} on index {} on device {}", speed, index, &device.name());
+                            let map = HashMap::from([(index, speed.min(1.0))]);
+                            device.vibrate(&ScalarValueCommand::ScalarValueMap(map)).await
+                                .context("couldn't send VibrateIndex command")?;
                         }
                     }
                 }

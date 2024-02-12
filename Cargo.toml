@@ -1,6 +1,6 @@
 [package]
 name = "cs2_buttplug"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["gloss-click", "hornycactus <me@cactus.sexy>"]
 edition = "2018"
 description = "Buttplug.io mod for CS2"
