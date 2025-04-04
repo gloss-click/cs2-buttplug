@@ -7,6 +7,10 @@ This update depends on a patched version of the csgo-gsi crate that I have inclu
 
 ![csbp 0 8 0](https://github.com/gloss-click/cs2-buttplug/assets/157309744/d87295f2-b41a-4c12-b09d-489594e38625)
 
+## Will it get me banned?
+
+cs2-buttplug takes advantage of the CS2 Game State Integration (GSI) used for external display of scores and other information at tournaments and live events. GSI is an official interface provided by Valve and does not provide any information that could allow a competitive advantage. While there's no reason to expect that running this software alone will result in your being banned from CS2, Valve have ultimate discretion over what they allow to interact with their game.
+
 ## Important ethical disclaimer
 
 This software is intended for risk-aware, consensual sexual enjoyment by all.
