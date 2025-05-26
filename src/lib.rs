@@ -2,7 +2,7 @@
 extern crate log;
 
 use std::{
-    path::PathBuf, str::FromStr,
+    future::IntoFuture, path::PathBuf, str::FromStr
 };
 
 use anyhow::{Context, Error};
@@ -39,12 +39,15 @@ fn spawn_tasks(config: &Config, tokio_handle: Handle, buttplug_send: broadcast::
 }
 
 pub async fn async_main_with_buttplug(config: Config, tokio_handle: Handle, close_send: broadcast::Sender<CloseEvent>) -> Result<(), Error> {
+    let tokio_handle2 = tokio_handle.clone();
     let (buttplug_send, buttplug_thread) = spawn_buttplug_client(&config.buttplug_server_url, close_send.subscribe(), None, None).await.unwrap();
-    async_main(config, tokio_handle, close_send, buttplug_send, buttplug_thread, None::<fn(&csgo_gsi::Update)>).await.unwrap();
+    let main_handle = async_main(config, tokio_handle, close_send, buttplug_send, None::<fn(&csgo_gsi::Update)>);
+    tokio_handle2.block_on(std::future::IntoFuture::into_future(main_handle)).unwrap();
+    tokio_handle2.block_on(buttplug_thread.into_future());
     Ok(())
 }
 
-pub async fn async_main<T: 'static + FnMut(&csgo_gsi::Update) + Send>(config: Config, tokio_handle: Handle, close_send: broadcast::Sender<CloseEvent>, buttplug_send: broadcast::Sender<BPCommand>, buttplug_thread: RemoteHandle<()>, gsi_listener: Option<T>) -> Result<(), Error> {
+pub async fn async_main<T: 'static + FnMut(&csgo_gsi::Update) + Send>(config: Config, tokio_handle: Handle, close_send: broadcast::Sender<CloseEvent>, buttplug_send: broadcast::Sender<BPCommand>, gsi_listener: Option<T>) -> Result<(), Error> {
     match spawn_tasks(&config, tokio_handle.clone(), buttplug_send) {
         Ok((mut gsi_server, event_proc_send, event_proc_thread, mut script_host)) => {
             gsi_server.add_listener(move |update| script_host.handle_update(update));
@@ -54,6 +57,7 @@ pub async fn async_main<T: 'static + FnMut(&csgo_gsi::Update) + Send>(config: Co
             }
                                         
             let gsi_close_event_receiver = close_send.subscribe();
+            let mut main_close_event_receiver = close_send.subscribe();
             
             let gsi_task_handle = gsi_server.run(tokio_handle.clone(), gsi_close_event_receiver).map_err(|err| anyhow::anyhow!("{}", err));
 
@@ -61,8 +65,7 @@ pub async fn async_main<T: 'static + FnMut(&csgo_gsi::Update) + Send>(config: Co
             let gsi_exit_handle = tokio_handle.spawn_blocking(move || gsi_tokio_handle.block_on(gsi_task_handle));
             
             info!("Initialised; waiting for exit");
-
-            buttplug_thread.await;
+            main_close_event_receiver.recv().await.expect("Critical: Crashed waiting for close event.");
             info!("Sending close event");
             close_send.send(CloseEvent{}).expect("Critical: Crashed sending close event.");
             info!("Closing GSI thread");

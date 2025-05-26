@@ -227,7 +227,9 @@ async fn run_buttplug(
             },
             Event::CloseCommand => {
                 info!("Buttplug thread asked to quit");
-                client.disconnect().await.expect("Failed to disconnect from buttplug");
+                if client.connected() {
+                    client.disconnect().await.expect("Failed to disconnect from buttplug");
+                }
             },
             Event::GuiCommand(GuiEvent::DeviceToggle(index, checked)) => {
                 info!("Device {} enabled {}", index, checked);

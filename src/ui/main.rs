@@ -96,6 +96,7 @@ enum Status {
 struct CsButtplugUi {
     tokio_runtime: Runtime,
     main_handle: Option<RemoteHandle<()>>,
+    buttplug_thread: Option<RemoteHandle<()>>,
     config: Config,
     close_send: tokio::sync::broadcast::Sender<CloseEvent>,
     _close_receive: tokio::sync::broadcast::Receiver<CloseEvent>,
@@ -121,6 +122,7 @@ impl CsButtplugUi {
         Self {
             tokio_runtime: Runtime::new().unwrap(),
             main_handle: None,
+            buttplug_thread: None,
             config: config,
             close_send, _close_receive,
             client_events: None,
@@ -162,7 +164,7 @@ impl CsButtplugUi {
         };
 
         let (main_future, main_handle) = async move {
-            let _ = async_main(config, handle, sender, buttplug_send, buttplug_thread, Some(func) /* None::<fn(&csgo_gsi::Update)> */ /* here */).await;
+            let _ = async_main(config, handle, sender, buttplug_send, Some(func) /* None::<fn(&csgo_gsi::Update)> */ /* here */).await;
         }.remote_handle();
 
         let tokio_handle = self.tokio_runtime.handle().clone();
@@ -170,11 +172,15 @@ impl CsButtplugUi {
             tokio_handle.block_on(main_future);
         });
 
+        self.buttplug_thread = Some(buttplug_thread);
         self.main_handle = Some(main_handle);
     }
 
     pub fn close(&mut self) {
         self.close_send.send(CloseEvent{}).expect("Failed to send close event.");
+        if let Some(handle) = &mut self.buttplug_thread {
+            self.tokio_runtime.block_on(handle.into_future());
+        }
         if let Some(handle) = &mut self.main_handle {
             self.tokio_runtime.block_on(handle.into_future());
         }
@@ -355,7 +361,17 @@ impl eframe::App for CsButtplugUi {
 
                 if let Some(ref update) = *locked_update {
                     if let Some(ref player) = update.player {
-                        ui.label(format!("name: {} team: {}", player.name, match player.team { None => "", Some(csgo_gsi::update::Team::T) => "Terrorists", Some(csgo_gsi::update::Team::CT) => "CTs"}));
+                        ui.label(format!("name: {} team: {} spectating: {}", 
+                            player.name, 
+                            match player.team { None => "", Some(csgo_gsi::update::Team::T) => "Terrorists", Some(csgo_gsi::update::Team::CT) => "CTs"},
+                            match &update.provider {
+                                Some(provider) => match &provider.steam_id {
+                                    i if *i == player.steam_id => "no",
+                                    _ => "yes",
+                                },
+                                _ => "unknown",
+                            }
+                        ));
                         if let Some(ref match_stats) = player.match_stats {
                             ui.label(format!("kills: {} deaths: {} assists: {} mvps: {}", match_stats.kills, match_stats.deaths, match_stats.assists, match_stats.mvps));
                         }
