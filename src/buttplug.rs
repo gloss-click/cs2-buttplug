@@ -222,9 +222,6 @@ async fn run_buttplug(
                                 }
                             }
                         }
-                    },
-                    _ => {
-                        debug!("Received unsupported command, ignoring.");
                     }
                 }                
             },

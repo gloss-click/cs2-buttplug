@@ -1,14 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::future::IntoFuture;
 use std::path::PathBuf;
 
 use std::str::FromStr;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use buttplug::client;
 use csgo_gsi::update::player::WeaponState;
 use eframe::egui;
 use cs2_buttplug::config::Config;
@@ -16,9 +15,8 @@ use cs2_buttplug::{async_main, spawn_buttplug_client, ClientEvent, CloseEvent, G
 use futures::future::RemoteHandle;
 use futures::FutureExt;
 use log::error;
-use serde::de::IgnoredAny;
 use tokio::runtime::Runtime;
-use std::{default, io};
+use std::io;
 use pretty_env_logger::env_logger::Target;
 
 const CS2_BP_DIR_PATH: &str = "CS2_BP_DIR_PATH";
@@ -57,7 +55,7 @@ fn main() -> Result<(), eframe::Error> {
         .init();
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 400.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 640.0]),
         ..Default::default()
     };
 
@@ -187,6 +185,12 @@ impl CsButtplugUi {
 impl eframe::App for CsButtplugUi {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
 
+        if let Some(handle) = &mut self.main_handle {
+            if let Some(_) = handle.now_or_never() {
+                self.main_handle = None;
+            }
+        }
+
         ctx.request_repaint_after(Duration::from_millis(10));
 
         if let Some(ref mut client_events) = self.client_events {
@@ -304,6 +308,11 @@ impl eframe::App for CsButtplugUi {
             if ctx.input(|i| i.viewport().close_requested()) {
                 self.close();
             }
+            ui.separator();
+
+            ui.heading("Scripts");
+
+            
 
             ui.separator();
 
