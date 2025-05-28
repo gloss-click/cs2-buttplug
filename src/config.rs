@@ -6,6 +6,7 @@ pub struct Config {
     pub buttplug_server_url: String,
     pub cs_integration_port: u16,
     pub cs_script_dir: Option<PathBuf>,
+    pub rhai_script_path: Option<PathBuf>
 }
 
 impl Default for Config {
@@ -14,6 +15,7 @@ impl Default for Config {
             buttplug_server_url: "ws://127.0.0.1:12345".to_string(),
             cs_integration_port: 42069,
             cs_script_dir: None,
+            rhai_script_path: None
         }
     }
 }

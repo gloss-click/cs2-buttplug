@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 use std::future::IntoFuture;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -16,7 +16,7 @@ use futures::future::RemoteHandle;
 use futures::FutureExt;
 use log::error;
 use tokio::runtime::Runtime;
-use std::io;
+use std::{fs, io};
 use pretty_env_logger::env_logger::Target;
 
 const CS2_BP_DIR_PATH: &str = "CS2_BP_DIR_PATH";
@@ -131,7 +131,7 @@ impl CsButtplugUi {
             logs,
             devices: HashMap::new(),
             autostarted: false,
-            last_update: Arc::new(Mutex::new(None))
+            last_update: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -285,22 +285,23 @@ impl eframe::App for CsButtplugUi {
 
             ui.heading("Start");
 
-            if self.main_handle.is_none() {
-                if ui.button("Launch").clicked() {
-                    self.launch_main();
-                }
-                if !self.autostarted {
-                    self.launch_main();
-                    self.autostarted = true
-                }
-            } else {
-                if ui.button("Relaunch").clicked() {
-                    self.close();
-                    self.launch_main();
-                }
-            }
 
-            ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                if self.main_handle.is_none() {
+                    if ui.button("Launch").clicked() {
+                        self.launch_main();
+                    }
+                    if !self.autostarted {
+                        self.launch_main();
+                        self.autostarted = true
+                    }
+                } else {
+                    if ui.button("Relaunch").clicked() {
+                        self.close();
+                        self.launch_main();
+                    }
+                }
+
                 ui.set_enabled(match self.main_handle {
                     Some(_) => true,
                     None => false,
@@ -318,7 +319,41 @@ impl eframe::App for CsButtplugUi {
 
             ui.heading("Scripts");
 
-            
+            let script_dir_path = Path::new("./scripts");
+
+            if !script_dir_path.exists() {
+                match fs::create_dir(script_dir_path) {
+                    Ok(_) => {
+                        let script_path = script_dir_path.join("default_script.rhai");
+                        match fs::write(&script_path, include_str!("../default_script.rhai")) {
+                            Ok(_) => {},
+                            Err(e) => {
+                                ui.label(e.to_string());
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        ui.label(e.to_string());
+                    }
+                }
+            }
+
+            let paths = fs::read_dir(script_dir_path);
+            match paths {
+                Ok(paths) => {
+                    for path in paths {
+                        if let Ok(path) = path {
+                            if (ui.selectable_value(&mut self.config.rhai_script_path, Some(path.path()), path.file_name().to_str().unwrap())).clicked() {
+                                self.close();
+                                self.launch_main();
+                            }
+                        }
+                    }
+                },
+                Err(e) => {
+                    ui.label(e.to_string());
+                }
+            }
 
             ui.separator();
 

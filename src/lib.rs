@@ -34,7 +34,7 @@ fn spawn_tasks(config: &Config, tokio_handle: Handle, buttplug_send: broadcast::
     let gsi_server = csgo::build_server(config.cs_integration_port, match &config.cs_script_dir { Some(dir) => dir.clone(), None => PathBuf::from_str(DEFAULT_GAME_DIR).unwrap() })
         .map_err(|err| anyhow::anyhow!("{}", err)).context("couldn't set up CS integration server")?;
     let (event_proc_send, event_proc_thread) = timer_thread::spawn_timer_thread(tokio_handle, buttplug_send)?;
-    let script_host = script::ScriptHost::new(event_proc_send.clone()).context("couldn't start script host")?;
+    let script_host = script::ScriptHost::new(event_proc_send.clone(), &config.rhai_script_path).context("couldn't start script host")?;
     Ok((gsi_server, event_proc_send, event_proc_thread, script_host))
 }
 

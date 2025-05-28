@@ -20,7 +20,7 @@ pub struct ScriptHost {
 }
 
 impl ScriptHost {
-    pub fn new(send: broadcast::Sender<ScriptCommand>) -> Result<Self, Error> {
+    pub fn new(send: broadcast::Sender<ScriptCommand>, config_script_path: &Option<PathBuf>) -> Result<Self, Error> {
         let vsend = send.clone();
         let visend = send.clone();
         let ssend = send.clone();
@@ -63,9 +63,12 @@ impl ScriptHost {
         });
         let mut scope = Scope::new();
 
-        let exe_path = current_exe().context("couldn't get path of Crotch-Stim: Get Off executable")?;
-        let script_path = exe_path.with_extension("rhai");
-
+        let exe_path = current_exe().context("couldn't get path of cs2-buttplug executable")?;
+        let script_path = match config_script_path {
+            Some(path) => path.clone(),
+            None => exe_path.with_extension("rhai"),
+        };
+        
         if !script_path.exists() {
             info!("Creating default script {} with default settings, go look over that script and then come back and press Enter", script_path.display());
             write(&script_path, include_str!("default_script.rhai")).context("couldn't save default config file")?;
@@ -74,6 +77,8 @@ impl ScriptHost {
         let mtime = metadata(&script_path)
             .and_then(|x| x.modified())
             .context("couldn't check modification time of script")?;
+
+        info!("Using script: {}", script_path.to_str().unwrap());
 
         let ast = engine.compile_file_with_scope(&mut scope, script_path.clone())
             .map_err(|err| {
