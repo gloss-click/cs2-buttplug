@@ -67,7 +67,6 @@ async fn timer_thread(send: broadcast::Sender<BPCommand>, mut recv: broadcast::R
         if let Some(front) = pqueue.first_entry() {
             if front.key() < &SystemTime::now() {
                 let (_key, value) = front.remove_entry();
-                info!("submitting command");
                 
                 match send.send(value) {
                     Ok(_) => {},

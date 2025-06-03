@@ -6,7 +6,7 @@ use std::{
 };
 
 use anyhow::{Context, Error};
-use csgo_gsi::update::{Update, CSGOPackage};
+use csgo_gsi::update::{player::WeaponState, CSGOPackage, Update};
 use rhai::{AST, Engine, packages::Package, Scope, RegisterFn};
 use tokio::sync::broadcast;
 use crate::timer_thread::ScriptCommand;
@@ -57,7 +57,7 @@ impl ScriptHost {
         });
         engine.register_fn("sleep", |time: f64| {
             std::thread::sleep(std::time::Duration::from_secs_f64(time));
-        });        
+        });
         engine.register_fn("log", move |msg: String| {
             info!("Script: {}", msg);
         });
@@ -114,7 +114,8 @@ impl ScriptHost {
             }
             self.last_modified = mtime;
         }
-        let result = self.engine.call_fn::<(Update,), ()>(&mut self.scope, &mut self.ast, "handle_update", (update.clone(),));
+        let is_player = update.player.as_ref().map_or_else(|| "".to_string(), |a| a.steam_id.clone()) == update.provider.as_ref().map_or_else(|| "".to_string(), |a| a.steam_id.clone());
+        let result = self.engine.call_fn::<(Update, bool), ()>(&mut self.scope, &mut self.ast, "handle_update", (update.clone(), is_player));
         if let Err(e) = result {
             error!("Error when handling update: {}", e);
         };
