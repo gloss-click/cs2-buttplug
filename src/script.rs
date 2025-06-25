@@ -70,7 +70,7 @@ impl ScriptHost {
         };
         
         if !script_path.exists() {
-            info!("Creating default script {} with default settings, go look over that script and then come back and press Enter", script_path.display());
+            info!("Creating default script {} with default settings.", script_path.display());
             write(&script_path, include_str!("default_script.rhai")).context("couldn't save default config file")?;
         }
 

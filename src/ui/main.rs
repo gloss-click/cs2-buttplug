@@ -140,8 +140,13 @@ impl CsButtplugUi {
     pub fn launch_main(&mut self) {
         // TODO: end previous
         let handle = self.tokio_runtime.handle().clone();
-        let config = self.config.clone();
+        let mut config = self.config.clone();
         let sender = self.close_send.clone();
+
+        config.rhai_script_path = match config.rhai_script_path {
+            Some(_) => config.rhai_script_path,
+            None => Some(Path::new("./scripts/default_script.rhai").to_path_buf())
+        };
 
         let (client_send, client_receive) = tokio::sync::broadcast::channel(64);
         self.client_events = Some(client_receive);
