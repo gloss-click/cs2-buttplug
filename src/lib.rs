@@ -39,11 +39,11 @@ fn spawn_tasks(config: &Config, tokio_handle: Handle, buttplug_send: broadcast::
 }
 
 pub async fn async_main_with_buttplug(config: Config, tokio_handle: Handle, close_send: broadcast::Sender<CloseEvent>) -> Result<(), Error> {
-    let tokio_handle2 = tokio_handle.clone();
+    //let tokio_handle2 = tokio_handle.clone();
     let (buttplug_send, buttplug_thread) = spawn_buttplug_client(&config.buttplug_server_url, close_send.subscribe(), None, None).await.unwrap();
     let main_handle = async_main(config, tokio_handle, close_send, buttplug_send, None::<fn(&csgo_gsi::Update)>);
-    tokio_handle2.block_on(std::future::IntoFuture::into_future(main_handle)).unwrap();
-    tokio_handle2.block_on(buttplug_thread.into_future());
+    main_handle.await;
+    buttplug_thread.into_future().await;
     Ok(())
 }
 
