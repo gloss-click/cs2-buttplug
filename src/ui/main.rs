@@ -34,7 +34,7 @@ impl io::Write for GuiLog {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         
         self.logs.lock().unwrap().push(std::str::from_utf8(buf).unwrap().to_string());
-        std::io::stdout().write(buf);
+        std::io::stdout().write(buf).expect("failed to write to stdout");
         Ok(buf.len())
     }
 
@@ -81,7 +81,7 @@ fn main() -> Result<(), eframe::Error> {
                 }
             }
 
-            Box::<CsButtplugUi>::new(CsButtplugUi::new(config, logs))
+            Ok(Box::<CsButtplugUi>::new(CsButtplugUi::new(config, logs)))
         }),
     )
 }
@@ -113,6 +113,8 @@ struct CsButtplugUi {
     autostarted: bool,
 
     last_update: Arc<Mutex<Option<csgo_gsi::Update>>>,
+
+    settings_window: bool,
 }
 
 impl CsButtplugUi {
@@ -132,6 +134,7 @@ impl CsButtplugUi {
             devices: HashMap::new(),
             autostarted: false,
             last_update: Arc::new(Mutex::new(None)),
+            settings_window: false,
         }
     }
 }
@@ -186,6 +189,7 @@ impl CsButtplugUi {
         if let Some(handle) = &mut self.buttplug_thread {
             self.tokio_runtime.block_on(handle.into_future());
         }
+        self.buttplug_thread = None;
         if let Some(handle) = &mut self.main_handle {
             self.tokio_runtime.block_on(handle.into_future());
         }
@@ -218,6 +222,16 @@ impl eframe::App for CsButtplugUi {
         }
         
         egui::CentralPanel::default().show(ctx, |mut ui| {
+
+            egui::MenuBar::new().ui(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Quit").clicked() {
+                        self.close();
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
+            });
+
             ui.heading("CS2 Buttplug.io integration");
             ui.add_space(5.0);
 
@@ -231,8 +245,42 @@ impl eframe::App for CsButtplugUi {
             ui.separator();
             ui.add_space(5.0);
 
-            ui.vertical(|ui| {
-                ui.heading("Settings");
+            ui.heading(format!("Status: {}", match self.main_handle {
+                Some(_) => "launched",
+                None => "stopped",
+            }));
+
+            ui.horizontal(|ui| {
+                if self.main_handle.is_none() {
+                    if ui.button("Launch").clicked() {
+                        self.launch_main();
+                    }
+                    if !self.autostarted {
+                        self.launch_main();
+                        self.autostarted = true
+                    }
+                } else {
+                    if ui.button("Relaunch").clicked() {
+                        self.close();
+                        self.launch_main();
+                    }
+                }
+
+                ui.set_enabled(match self.main_handle {
+                    Some(_) => true,
+                    None => false,
+                });
+
+                if ui.button("Stop").clicked() {
+                    self.close();
+                }
+            });
+
+            if ctx.input(|i| i.viewport().close_requested()) {
+                self.close();
+            }
+
+            egui::CollapsingHeader::new("Settings").show(&mut ui, |mut ui| {
 
                 ui.set_enabled(match self.main_handle {
                     Some(_) => false,
@@ -285,42 +333,8 @@ impl eframe::App for CsButtplugUi {
                 }
             });
 
+            ui.separator();
             ui.add_space(5.0);
-            ui.separator();
-
-            ui.heading("Start");
-
-
-            ui.horizontal(|ui| {
-                if self.main_handle.is_none() {
-                    if ui.button("Launch").clicked() {
-                        self.launch_main();
-                    }
-                    if !self.autostarted {
-                        self.launch_main();
-                        self.autostarted = true
-                    }
-                } else {
-                    if ui.button("Relaunch").clicked() {
-                        self.close();
-                        self.launch_main();
-                    }
-                }
-
-                ui.set_enabled(match self.main_handle {
-                    Some(_) => true,
-                    None => false,
-                });
-
-                if ui.button("Stop").clicked() {
-                    self.close();
-                }
-            });
-
-            if ctx.input(|i| i.viewport().close_requested()) {
-                self.close();
-            }
-            ui.separator();
 
             ui.heading("Scripts");
 
@@ -343,24 +357,27 @@ impl eframe::App for CsButtplugUi {
                 }
             }
 
-            let paths = fs::read_dir(script_dir_path);
-            match paths {
-                Ok(paths) => {
-                    for path in paths {
-                        if let Ok(path) = path {
-                            if (ui.selectable_value(&mut self.config.rhai_script_path, Some(path.path()), path.file_name().to_str().unwrap())).clicked() {
-                                self.close();
-                                self.launch_main();
+            ui.horizontal(|ui| {
+                let paths = fs::read_dir(script_dir_path);
+                match paths {
+                    Ok(paths) => {
+                        for path in paths {
+                            if let Ok(path) = path {
+                                if (ui.selectable_value(&mut self.config.rhai_script_path, Some(path.path()), path.file_name().to_str().unwrap())).clicked() {
+                                    self.close();
+                                    self.launch_main();
+                                }
                             }
                         }
+                    },
+                    Err(e) => {
+                        ui.label(e.to_string());
                     }
-                },
-                Err(e) => {
-                    ui.label(e.to_string());
                 }
-            }
+            });
 
             ui.separator();
+            ui.add_space(5.0);
 
             ui.heading("Devices");
 
@@ -372,7 +389,7 @@ impl eframe::App for CsButtplugUi {
                 }
             }
 
-            for (index, (name, ref mut status)) in self.devices.iter_mut() {
+            for (index, (name, status)) in self.devices.iter_mut() {
                 ui.set_enabled(match status {
                     Status::Absent => false,
                     _ => true,
@@ -393,6 +410,7 @@ impl eframe::App for CsButtplugUi {
                 }
             }
             ui.separator();
+            ui.add_space(5.0);
 
             ui.heading("Game State");
 
