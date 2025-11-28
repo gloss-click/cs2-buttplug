@@ -1,8 +1,8 @@
 [package]
 name = "cs2_buttplug"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["gloss-click", "hornycactus <me@cactus.sexy>"]
-edition = "2018"
+edition = "2024"
 description = "Buttplug.io mod for CS2"
 readme = "README.md"
 homepage = "https://github.com/gloss-click/cs2-buttplug"
@@ -23,7 +23,7 @@ name = "cs2_buttplug_ui"
 path = "src/ui/main.rs"
 
 [dependencies]
-buttplug = "7.1.11"
+buttplug = "9.0.9"
 csgo-gsi = { features = ["rhai"], git = 'https://github.com/gloss-click/csgo-gsi.git' }
 rhai = { version = "0.18.3", features = ["sync"] }
 futures = "0.3.30"
@@ -37,5 +37,6 @@ pretty_env_logger = "0.5.0"
 git-transport = { version = "0.2.1", features = ["http-client-curl"] }
 semver = "0.10.0"
 socket2 = "0.3.16"
-eframe = { version = "0.25.0", features = ["persistence"] }
+eframe = { version = "0.33", features = ["persistence"] }
 rfd = "0.13.0"
+chrono = "0.4.42"
