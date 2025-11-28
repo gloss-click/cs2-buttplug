@@ -4,11 +4,10 @@ use anyhow::{Context, Error};
 use buttplug::{
     client::{
         ButtplugClient,
-        ButtplugClientEvent, device::ScalarValueCommand, device::LinearCommand
+        ButtplugClientEvent, device::{LinearCommand, ScalarValueCommand}
     },
-    core::connector::{ButtplugRemoteClientConnector, ButtplugWebsocketClientTransport},
-    core::message::serializer::ButtplugClientJSONSerializer,
-    util::async_manager
+    core::{connector::{ButtplugRemoteClientConnector, ButtplugWebsocketClientTransport}, message::serializer::ButtplugClientJSONSerializer},
+    util::{async_manager, in_process_client}
 };
 use futures::{future::RemoteHandle, StreamExt};
 use tokio::sync::broadcast;
@@ -40,11 +39,11 @@ async fn run_buttplug_catch(
     client_send: Option<tokio::sync::broadcast::Sender<ClientEvent>>, 
     gui_receive: Option<broadcast::Receiver<GuiEvent>>,
     close_receive: broadcast::Receiver<CloseEvent>, 
-    client: ButtplugClient,
-    transport: ButtplugWebsocketClientTransport,
+    client_name: &str,
+    transport: Option<ButtplugWebsocketClientTransport>,
     rx: broadcast::Receiver<BPCommand>,
 ) {
-    let err = run_buttplug(client_send, gui_receive, close_receive, client, transport, rx).await;
+    let err = run_buttplug(client_send, gui_receive, close_receive, client_name, transport, rx).await;
     if let Err(err) = err {
         error!("Buttplug thread error: {}", err);
     }
@@ -54,16 +53,20 @@ async fn run_buttplug(
     client_send: Option<tokio::sync::broadcast::Sender<ClientEvent>>,
     gui_receive: Option<broadcast::Receiver<GuiEvent>>,
     close_receive: broadcast::Receiver<CloseEvent>, 
-    client: ButtplugClient,
-    transport: ButtplugWebsocketClientTransport,
+    //client: ButtplugClient,
+    client_name: &str,
+    transport: Option<ButtplugWebsocketClientTransport>,
     rx: broadcast::Receiver<BPCommand>,
 ) -> Result<(), Error> {
     info!("Launched buttplug.io thread");
 
+    let client = match transport {
+        Some(_) => ButtplugClient::new(client_name),
+        _ => in_process_client(client_name, false).await,
+    };
+
     let recv = tokio_stream::wrappers::BroadcastStream::new(rx);
     let close_recv = tokio_stream::wrappers::BroadcastStream::new(close_receive);
-
-    let connector = ButtplugRemoteClientConnector::<ButtplugWebsocketClientTransport, ButtplugClientJSONSerializer>::new(transport);
 
 
     info!("Starting buttplug.io client");
@@ -104,7 +107,10 @@ async fn run_buttplug(
         }),
     );
 
-    client.connect(connector).await?;
+    if let Some(transport) = transport {
+        let connector = ButtplugRemoteClientConnector::<ButtplugWebsocketClientTransport, ButtplugClientJSONSerializer>::new(transport);
+        client.connect(connector).await?;
+    }
     client.start_scanning().await.context("Couldn't start buttplug.io device scan")?;
 
     let mut enabled_devices = HashSet::new();
@@ -257,19 +263,21 @@ pub fn spawn_run_thread(close_receive: broadcast::Receiver<CloseEvent>, connect_
     info!("Spawning buttplug thread");
     let client_name = "CS2 integration";
     let (send, recv) = broadcast::channel(5);
-    let bpclient = ButtplugClient::new(client_name);
 
-    let transport = if connect_url.starts_with("wss://") {
-        ButtplugWebsocketClientTransport::new_secure_connector(&connect_url, false)
-    } else {
-        ButtplugWebsocketClientTransport::new_insecure_connector(&connect_url)
+    let transport = match connect_url {
+        connect_url if connect_url.starts_with("wss://") => Some(ButtplugWebsocketClientTransport::new_secure_connector(&connect_url, false)),
+        connect_url if connect_url.starts_with("ws://") => Some(ButtplugWebsocketClientTransport::new_insecure_connector(&connect_url)),
+        _ => {
+            warn!("Invalid server URL, starting local buttplug.io server.");
+            None
+        }
     };
 
     let handle = async_manager::spawn_with_handle(run_buttplug_catch(
                 client_send,
                 gui_receive,
                 close_receive,
-                bpclient,
+                client_name,
                 transport,
                 recv,
             ))?;
