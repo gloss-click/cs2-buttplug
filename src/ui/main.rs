@@ -223,15 +223,6 @@ impl eframe::App for CsButtplugUi {
         
         egui::CentralPanel::default().show(ctx, |mut ui| {
 
-            egui::MenuBar::new().ui(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        self.close();
-                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                    }
-                });
-            });
-
             ui.heading("CS2 Buttplug.io integration");
             ui.add_space(5.0);
 
