@@ -5,7 +5,7 @@ I am not cool enough to think up a CS2 pun with the sheer power of 'Crotch-Stim:
 I've tried to preserve as much of the original readme as possible (all license terms etc persist) but have updated the relevant parts.
 This update depends on a patched version of the csgo-gsi crate that I have included as a submodule.
 
-![csbp 0 8 0](https://github.com/gloss-click/cs2-buttplug/assets/157309744/d87295f2-b41a-4c12-b09d-489594e38625)
+![csbp-0 11](https://github.com/user-attachments/assets/5da19cc1-d59f-46b7-9b22-b032ca15ffe0)
 
 ## Will it get me banned?
 
@@ -135,6 +135,23 @@ This software is released under the [Fuck Around and Find Out License version 0.
 The `csgo-gsi` library that this uses is released under the [Anti-Capitalist Software License version 1.4](https://anticapitalist.software/).
 
 ## Changelog
+v0.11.0 - 2025-06-25
+- Resolved a bug where the application would crash on relaunching.
+- Some improvements to live data view in UI.
+- Multiple scripts can now be stored in the 'scripts' subdirectory and switched between in the UI on the fly.
+- The handle_update main script folder now has an is_player variable handed to it for convenience. When is_player is false, the CS session is spectating (the active steam id is not the current player).
+- Default script for UI is now generated into scripts subdirectory.
+
+v0.10.0 - 2025-01-29
+- Some GSI update values exposed in a UI panel for monitoring.
+- Initial support for linear devices courtesty of DasPauluteli ([#5](https://github.com/gloss-click/cs2-buttplug/pull/5))
+- Removed dependency on fehler-throws.
+
+v0.9.0 - 2024-08-06
+- Increase RHAI operation count.
+- Increase GSI heartbeart to 1s
+- Limit vibrateindex calls to the available index range
+- Check steam id in default RHAI script so that spectating people who gets kills won't skew your count
 
 v0.8.0 - 2024-06-02
 - Add log panel to gui
