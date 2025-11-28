@@ -336,14 +336,19 @@ impl eframe::App for CsButtplugUi {
             ui.separator();
             ui.add_space(5.0);
 
-            ui.heading("Scripts");
+            const DEFAULT_SCRIPT: &'static str = "default_script.rhai";
+
+            ui.heading(format!("Script: {}", match &self.config.rhai_script_path {
+                Some(path) => path.file_name().unwrap().to_str().unwrap(),
+                None => DEFAULT_SCRIPT,
+            }));
 
             let script_dir_path = Path::new("./scripts");
 
             if !script_dir_path.exists() {
                 match fs::create_dir(script_dir_path) {
                     Ok(_) => {
-                        let script_path = script_dir_path.join("default_script.rhai");
+                        let script_path = script_dir_path.join(DEFAULT_SCRIPT);
                         match fs::write(&script_path, include_str!("../default_script.rhai")) {
                             Ok(_) => {},
                             Err(e) => {
